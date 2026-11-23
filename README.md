@@ -2,6 +2,8 @@
 
 Guided breathing app: 40 breaths (4 s in / 3 s out) → breath hold (double-tap to stop, time is recorded) → 15 s recovery hold → bong → repeat until you press Stop.
 
+This is a very simple app. It requests no permissions (not even internet access), has no ads or tracking, and stores its data only on your device. Nothing is sent anywhere, so there are no privacy concerns.
+
 ## Get the APK (no Android Studio needed)
 1. Create a new repository on github.com (private is fine).
 2. Upload the contents of this folder (keep the `.github` folder!) and commit to `main`.
@@ -52,3 +54,9 @@ The key is not in the repo. GitHub Actions reads it from these repository secret
 For local builds, put the keystore at `app/breathe-debug.jks` (gitignored) and set the same names (except `BREATHE_KEYSTORE_BASE64`) as environment variables or in `~/.gradle/gradle.properties`. Without them, local builds use the default Android debug key and won't install over the GitHub builds.
 Keep a backup of the keystore: if it is lost, the next build can't update the installed app, and you have to uninstall it (Android may then start a new CSV file).
 Requires Android 10 or newer.
+
+## License
+Breathe is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). You may use, copy, modify and share it for any noncommercial purpose. Commercial use is not permitted.
+Anyone who passes on a copy, changed or not, must include the license terms and this line:
+
+    Required Notice: Copyright (c) 2026 Omkar Karve (https://github.com/omitheaussie/breatheApp)
