@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1320">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Breathe</title>
+<style>
+  :root {
+    --bg: #0b1320;
+    --bg2: #111c2e;
+    --ink: #e8eef7;
+    --muted: #8fa1ba;
+    --in: #4fc3c9;
+    --out: #6c8cff;
+    --hold: #f2b45c;
+    --rec: #9be37a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; background: radial-gradient(120% 90% at 50% 30%, var(--bg2), var(--bg));
+    color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    touch-action: manipulation; user-select: none; -webkit-user-select: none; overflow: hidden;
+  }
+  #app { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; }
+
+  /* ---------- home screen ---------- */
+  #home { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; overflow-y: auto; }
+  #home .center { min-height: 46vh; padding-top: 4vh; display: flex; align-items: center; justify-content: center; }
+  #startBtn {
+    width: 190px; height: 190px; border-radius: 50%; border: none; cursor: pointer;
+    background: radial-gradient(circle at 35% 30%, #7fe0e4, var(--in) 55%, #2e8f95);
+    color: #06222a; font-size: 26px; font-weight: 700; letter-spacing: .5px;
+    box-shadow: 0 0 0 10px rgba(79,195,201,.12), 0 0 60px rgba(79,195,201,.35);
+    animation: idle 4s ease-in-out infinite;
+  }
+  #startBtn:active { transform: scale(.96); }
+  @keyframes idle { 0%,100% { box-shadow: 0 0 0 10px rgba(79,195,201,.10), 0 0 50px rgba(79,195,201,.25);} 50% { box-shadow: 0 0 0 22px rgba(79,195,201,.06), 0 0 80px rgba(79,195,201,.40);} }
+
+  #history { width: min(560px, 92vw); padding-bottom: 40px; }
+  #history h2 { font-size: 15px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
+  .fileNote { color: var(--muted); font-size: 12px; text-align: center; margin-top: 8px; }
+  #copyBtn, #clearBtn { background: none; border: 1px solid #2a3a55; color: var(--muted); border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+  .stats { display: flex; gap: 10px; margin-bottom: 14px; }
+  .stat { flex: 1; background: rgba(255,255,255,.04); border: 1px solid #1f2d44; border-radius: 12px; padding: 10px 12px; }
+  .stat .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .session { background: rgba(255,255,255,.03); border: 1px solid #1f2d44; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+  .session .when { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .rounds { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: #16243a; border-radius: 8px; padding: 5px 9px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .chip b { color: var(--muted); font-weight: 500; margin-right: 4px; font-size: 12px; }
+  .chip.best { outline: 1px solid var(--hold); }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 10px 0 20px; }
+
+  /* ---------- session screen ---------- */
+  #session { display: none; position: fixed; inset: 0; flex-direction: column; align-items: center;
+    padding: max(14px, env(safe-area-inset-top)) 0 max(14px, env(safe-area-inset-bottom)); }
+  #main { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #topbar { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; }
+  #roundLbl { color: var(--muted); font-size: 15px; letter-spacing: .5px; }
+  #stopBtn { background: rgba(255,255,255,.06); border: 1px solid #2a3a55; color: var(--ink); border-radius: 10px; padding: 8px 14px; font-size: 15px; cursor: pointer; }
+  #orbWrap { width: 300px; height: 300px; display: flex; align-items: center; justify-content: center; }
+  #orb {
+    width: 300px; height: 300px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.35), var(--in) 60%);
+    transform: scale(.45); opacity: .95;
+    box-shadow: 0 0 80px rgba(79,195,201,.35);
+    will-change: transform;
+  }
+  #phaseLbl { margin-top: 22px; font-size: 34px; font-weight: 700; letter-spacing: .5px; text-align: center; min-height: 44px; }
+  #subLbl { margin-top: 8px; font-size: 17px; color: var(--muted); text-align: center; min-height: 24px; font-variant-numeric: tabular-nums; }
+  #bigTimer { position: absolute; font-size: 56px; font-weight: 700; font-variant-numeric: tabular-nums; color: #1a1205; pointer-events: none; }
+  #lastHold { margin-top: 14px; color: var(--muted); font-size: 14px; text-align: center; padding: 0 20px; min-height: 18px; }
+  #orbWrap { width: min(300px, 66vw, 34vh); height: min(300px, 66vw, 34vh); }
+  #orb { width: min(300px, 66vw, 34vh); height: min(300px, 66vw, 34vh); }
+
+  /* ---------- controls (sliders + ring toggle) ---------- */
+  .controls { width: min(420px, 90vw); background: rgba(255,255,255,.04); border: 1px solid #1f2d44; border-radius: 14px; padding: 12px 16px 6px; }
+  .ctl { margin-bottom: 10px; }
+  .ctl label { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); margin-bottom: 4px; }
+  .ctl label span { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ctl input[type=range] { width: 100%; height: 32px; margin: 0; accent-color: var(--in); }
+  .ctl.out input[type=range] { accent-color: var(--out); }
+  .ctl.count input[type=range] { accent-color: var(--hold); }
+  .countChips { display: flex; gap: 6px; }
+  .countChip { flex: 1; padding: 8px 0; border-radius: 9px; border: 1px solid #2a3a55; background: rgba(255,255,255,.04); color: var(--ink); font-size: 15px; font-weight: 600; cursor: pointer; }
+  .countChip.on { background: var(--hold); border-color: var(--hold); color: #1a1205; }
+  .tog, .ringBtn { background: rgba(255,255,255,.06); border: 1px solid #2a3a55; color: var(--ink); border-radius: 10px; padding: 8px 12px; font-size: 15px; cursor: pointer; }
+  .tog[aria-pressed=false] { color: var(--muted); opacity: .7; text-decoration: line-through; }
+  .tog.short { padding: 8px 10px; }
+  .toggles { display: flex; gap: 8px; }
+  #home .center { flex-direction: column; gap: 14px; }
+  #startInfo { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .ctl input[type=range] { touch-action: pan-y; }
+  /* history rows + selection */
+  .row { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-top: 1px solid #1c2a40; font-variant-numeric: tabular-nums;
+         -webkit-touch-callout: none; touch-action: pan-y; }
+  .when + .row { border-top: none; }
+  .row .r { color: var(--muted); font-size: 14px; flex: 1; }
+  .row .t { font-size: 16px; font-weight: 600; }
+  .row.best .t { color: var(--hold); }
+  .row .chk { display: none; width: 22px; height: 22px; border-radius: 6px; border: 2px solid #3a4d6b; flex-shrink: 0; }
+  .selecting .row .chk { display: inline-block; }
+  .selecting .row { cursor: pointer; }
+  .row.sel { background: rgba(108,140,255,.12); border-radius: 8px; }
+  .row.sel .chk { background: var(--out); border-color: var(--out); position: relative; }
+  .row.sel .chk::after { content: '✓'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 700; }
+  .hint { color: var(--muted); font-size: 12px; text-align: center; margin: 4px 0 10px; }
+  #selectBar { display: none; position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 14px max(12px, env(safe-area-inset-bottom));
+               background: #0e1829; border-top: 1px solid #23324c; align-items: center; gap: 8px; z-index: 5; }
+  #selectBar.show { display: flex; }
+  #selectBar button:disabled { opacity: .4; }
+  #selCount { flex: 1; color: var(--muted); font-size: 14px; }
+  #selectBar button, #modal button { border-radius: 10px; padding: 9px 12px; font-size: 14px; border: 1px solid #2a3a55; background: rgba(255,255,255,.06); color: var(--ink); cursor: pointer; }
+  #selectBar button.danger, #modal button.danger { background: #c94a4a; border-color: #c94a4a; color: #fff; }
+  #selectBar button.danger.outline { background: none; color: #ff8a8a; border-color: #c94a4a; }
+  button:disabled { opacity: .4; }
+  #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 10; align-items: center; justify-content: center; padding: 24px; }
+  #modal.show { display: flex; }
+  #modal .box { background: #121d30; border: 1px solid #2a3a55; border-radius: 16px; padding: 20px; width: min(380px, 100%); }
+  #modalTitle { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  #modalText { color: var(--muted); font-size: 15px; line-height: 1.4; margin-bottom: 18px; }
+  #modal .btns { display: flex; justify-content: flex-end; gap: 10px; }
+  #history.selecting { padding-bottom: 90px; }
+  #homeCtlWrap { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 26px; }
+  #sessionControls { flex-shrink: 0; }
+  #session.adjusting #orbWrap, #session.adjusting #orb { width: min(300px, 50vw, 20vh); height: min(300px, 50vw, 20vh); }
+  #session.adjusting #bigTimer { font-size: 40px; }
+  #session.adjusting #phaseLbl { margin-top: 12px; font-size: 28px; }
+  #orb { flex-shrink: 0; }
+  #lastHold { margin: 6px 0 10px; }
+  .summary { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--muted); margin-bottom: 10px; }
+  .summary b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .adjBtn { background: rgba(255,255,255,.06); border: 1px solid #2a3a55; color: var(--ink); border-radius: 8px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
+  #sessionControls:not(.open) .sliders { display: none; }
+  #topRight { display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="home">
+    <div class="center"><button id="startBtn">Start</button><div id="startInfo"></div></div>
+    <div id="homeCtlWrap">
+      <div class="controls" id="homeControls"></div>
+      <div class="toggles"><button class="tog" data-t="voice"></button><button class="tog" data-t="ring"></button></div>
+    </div>
+    <div id="history"></div>
+  </div>
+
+  <div id="selectBar">
+    <button id="selCancel">Cancel</button>
+    <span id="selCount">0 selected</span>
+    <button id="selDelete" class="danger">Delete</button>
+    <button id="selAll" class="danger outline">Delete all</button>
+  </div>
+
+  <div id="modal"><div class="box">
+    <div id="modalTitle"></div><div id="modalText"></div>
+    <div class="btns"><button id="modalNo">Cancel</button><button id="modalYes" class="danger">Delete</button></div>
+  </div></div>
+
+  <div id="session">
+    <div id="topbar"><span id="roundLbl">Round 1</span><div id="topRight"><button class="tog short" data-t="voice"></button><button class="tog short" data-t="ring"></button><button id="stopBtn">Stop</button></div></div>
+    <div id="main">
+      <div id="orbWrap"><div id="orb"></div><div id="bigTimer"></div></div>
+      <div id="phaseLbl"></div>
+      <div id="subLbl"></div>
+    </div>
+    <div id="lastHold"></div>
+    <div class="controls" id="sessionControls"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------------- constants ----------------
+  const SPEED = Math.max(1, Number(new URLSearchParams(location.search).get('speed')) || 1); // test hook
+  const RECOVERY_SEC = 15;
+  const RECOVERY_MS = RECOVERY_SEC * 1000 / SPEED;
+  const GAP_MS = 3000 / SPEED;          // pause after the end-of-round gong before the next round
+  const DOUBLE_TAP_MS = 400;
+  const STORE_KEY = 'breathe.records.v1';
+  const SETTINGS_KEY = 'breathe.settings.v1';
+
+  // ---------------- settings (persisted) ----------------
+  const settings = Object.assign({ inSec: 4, outSec: 3, breaths: 40, ring: true, voice: true }, (() => {
+    try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch (e) { return {}; }
+  })());
+  function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {} }
+
+  // ---------------- elements ----------------
+  const $ = id => document.getElementById(id);
+  const home = $('home'), session = $('session'), orb = $('orb');
+  const phaseLbl = $('phaseLbl'), subLbl = $('subLbl'), roundLbl = $('roundLbl');
+  const bigTimer = $('bigTimer'), lastHoldLbl = $('lastHold'), sessionControls = $('sessionControls');
+
+  // ---------------- sliders + ring toggle ----------------
+  const ctlHTML = `
+    <div class="ctl in"><label>Breathe in <span data-v="inSec"></span></label>
+      <input type="range" min="1" max="15" step="0.5" data-k="inSec" aria-label="Breathe in seconds"></div>
+    <div class="ctl out"><label>Breathe out <span data-v="outSec"></span></label>
+      <input type="range" min="1" max="15" step="0.5" data-k="outSec" aria-label="Breathe out seconds"></div>
+`;
+  // breaths per round: tap buttons (a slider here jumped to 45 when a scroll started on it)
+  const chipsHTML = label => `
+    <div class="ctl count"><label>${label}</label>
+      <div class="countChips">${[25, 30, 35, 40, 45].map(n => `<button class="countChip" data-n="${n}">${n}</button>`).join('')}</div></div>`;
+  const countChips = chipsHTML('Breaths this round');
+  $('homeControls').innerHTML = ctlHTML + chipsHTML('Breaths per round');
+  sessionControls.innerHTML = `
+    <div class="summary"><span>In <b data-v="inSec"></b> · Out <b data-v="outSec"></b></span>
+      <button class="adjBtn">Adjust</button></div>
+    <div class="sliders">${ctlHTML}</div>` + countChips;
+  // in/out sliders stay locked during a session until "Adjust" is tapped; they re-lock after 6 s idle
+  let lockTimer = null;
+  const adjBtn = sessionControls.querySelector('.adjBtn');
+  function relockSoon() { clearTimeout(lockTimer); lockTimer = setTimeout(() => setOpen(false), 6000); }
+  function setOpen(open) {
+    sessionControls.classList.toggle('open', open);
+    session.classList.toggle('adjusting', open);
+    adjBtn.textContent = open ? 'Done' : 'Adjust';
+    if (open) relockSoon(); else clearTimeout(lockTimer);
+  }
+  adjBtn.addEventListener('click', e => { e.stopPropagation(); setOpen(!sessionControls.classList.contains('open')); });
+  document.querySelectorAll('.countChip').forEach(c => c.addEventListener('click', e => {
+    e.stopPropagation();
+    settings.breaths = Number(c.dataset.n); saveSettings(); syncControls();
+    if (running && (phase === 'in' || phase === 'out')) subLbl.textContent = `of ${settings.breaths} breaths · double-tap to skip`;
+  }));
+  function syncControls(skip) {
+    document.querySelectorAll('input[data-k]').forEach(i => { if (i !== skip) i.value = settings[i.dataset.k]; });
+    document.querySelectorAll('[data-v]').forEach(s => (s.textContent = settings[s.dataset.v] + (s.dataset.v === 'breaths' ? '' : ' s')));
+    document.querySelectorAll('.countChip').forEach(c => c.classList.toggle('on', Number(c.dataset.n) === settings.breaths));
+    document.querySelectorAll('.tog').forEach(b => {
+      const t = b.dataset.t, on = !!settings[t], short = b.classList.contains('short');
+      const icon = t === 'ring' ? (on ? '🔔' : '🔕') : (on ? '🗣' : '🔇');
+      const name = t === 'ring' ? 'Ring' : 'Voice';
+      b.setAttribute('aria-pressed', String(on));
+      b.setAttribute('aria-label', `${name} ${on ? 'on' : 'off'}`);
+      b.textContent = short ? icon : `${icon} ${name} ${on ? 'on' : 'off'}`;
+    });
+    const si = $('startInfo');
+    if (si) si.textContent = `${settings.breaths} breaths · in ${settings.inSec} s · out ${settings.outSec} s`;
+  }
+  document.addEventListener('input', e => {
+    const k = e.target && e.target.dataset && e.target.dataset.k;
+    if (!k) return;
+    const i = e.target;
+    settings[k] = Math.min(Number(i.max), Math.max(Number(i.min), Number(i.value)));
+    saveSettings(); syncControls(i);
+    if (sessionControls.contains(i)) relockSoon();
+    retimeCurrentBreath();
+  });
+  document.querySelectorAll('.tog').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    initAudio();
+    const t = b.dataset.t;
+    settings[t] = !settings[t]; saveSettings(); syncControls();
+    if (t === 'ring' && settings.ring) ring();
+    if (t === 'voice' && !settings.voice && running && (phase === 'in' || phase === 'out')) stopSpeech();
+  }));
+  syncControls();
+
+  // ---------------- voice ----------------
+  const hasNative = typeof window.AndroidTTS !== 'undefined';
+  let speechTimer = null;
+  function speak(text) {
+    try {
+      if (hasNative) { window.AndroidTTS.speak(text); return; }
+      if (!('speechSynthesis' in window)) return;
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.95; u.pitch = 1.0; u.lang = 'en-US';
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function stopSpeech() {
+    clearTimeout(speechTimer);
+    try { hasNative ? window.AndroidTTS.stop() : speechSynthesis.cancel(); } catch (e) {}
+  }
+  function speakAfter(text, ms) {
+    clearTimeout(speechTimer);
+    speechTimer = setTimeout(() => { if (running) speak(text); }, ms);
+  }
+
+  // ---------------- sound ----------------
+  let ctx = null;
+  function initAudio() {
+    try {
+      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+    } catch (e) {}
+  }
+  // one struck tone made of partials: [ratio, amplitude, decaySeconds]
+  function strike(base, partials, gain, when = 0, bend = 1) {
+    if (!ctx) return;
+    const t = ctx.currentTime + when;
+    const master = ctx.createGain();
+    master.gain.value = gain;
+    master.connect(ctx.destination);
+    partials.forEach(([r, a, d]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(base * r, t);
+      if (bend !== 1) o.frequency.exponentialRampToValueAtTime(base * r * bend, t + d);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(a, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + d + 0.05);
+    });
+  }
+  // small, discreet chime before each breath (slightly higher for "in" than "out")
+  function ring(isIn = true) {
+    if (!settings.ring) return;
+    strike(isIn ? 1760 : 1480, [[1, 0.5, 0.45], [2.01, 0.15, 0.25]], 0.18);
+  }
+  // three distinct gongs for the end of each section
+  const GONGS = {
+    // end of 40 breaths: deep temple gong with a slight downward bend
+    breathing: () => strike(110, [[1, 0.9, 6], [1.48, 0.5, 4.5], [2.0, 0.35, 3.5], [2.66, 0.25, 2.6], [3.2, 0.15, 2]], 0.8, 0, 0.985),
+    // end of breath hold (double-tap): bright mid bell
+    hold: () => strike(330, [[1, 0.8, 3.5], [2.0, 0.4, 2.5], [2.4, 0.3, 2], [3.0, 0.2, 1.5], [4.2, 0.1, 1]], 0.6),
+    // end of 15 s hold: classic bong, struck twice
+    recovery: () => {
+      const p = [[1, 1.0, 4.5], [2, 0.5, 3.2], [3, 0.28, 2.4], [4, 0.2, 1.8], [5.34, 0.12, 1.2]];
+      strike(196, p, 0.5, 0); strike(196, p, 0.5, 0.6);
+    },
+  };
+
+  // ---------------- keep screen awake ----------------
+  let wakeLock = null;
+  async function lockScreen() {
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+  function unlockScreen() { try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null; }
+  document.addEventListener('visibilitychange', () => { if (running && document.visibilityState === 'visible') lockScreen(); });
+
+  // ---------------- storage ----------------
+  // Android app: every completed round is appended as one line to Documents/Breathe/breath_holds.csv
+  //              and the history is read back from that file.
+  // Web version: kept in this browser's storage (copyable as CSV).
+  // One row per completed round, with every app setting in effect for that round.
+  const CSV_COLUMNS = ['timestamp', 'session_start', 'round', 'hold_seconds', 'breaths_done', 'breaths_target',
+                       'in_seconds', 'out_seconds', 'recovery_hold_seconds', 'ring_enabled',
+                       'settings_changed_mid_round', 'app_version', 'voice_enabled'];
+  const CSV_HEADER = CSV_COLUMNS.join(',');
+  let APP_VERSION = 'web';
+  try { if (hasNative && window.AndroidTTS.appVersion) APP_VERSION = 'android-' + window.AndroidTTS.appVersion(); } catch (e) {}
+  const nativeFile = hasNative && typeof window.AndroidTTS.appendCsv === 'function';
+  function stamp(ms) {
+    const d = new Date(ms), p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  }
+  function parseCsv(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    const head = (lines.shift() || '').split(',').map(h => h.trim());   // read columns by name
+    return lines.map(l => {
+      const c = l.split(','), v = name => c[head.indexOf(name)];
+      return { timestamp: v('timestamp'), session: v('session_start'), round: Number(v('round')),
+               holdMs: Math.round(Number(v('hold_seconds')) * 1000), raw: l };
+    }).filter(r => r.session && !isNaN(r.holdMs));
+  }
+  function load() {
+    if (nativeFile) { try { return parseCsv(window.AndroidTTS.readCsv() || ''); } catch (e) { return []; } }
+    try {
+      return (JSON.parse(localStorage.getItem(STORE_KEY)) || [])
+        .map((r, i) => Object.assign({}, r, { idx: i }))
+        .map(r => (typeof r.session === 'number' ? Object.assign({}, r, { session: stamp(r.session), timestamp: stamp(r.at || r.session) }) : r));
+    } catch (e) { return []; }
+  }
+  function csvLine(r) {
+    const row = {
+      timestamp: r.timestamp || '', session_start: r.session, round: r.round, hold_seconds: (r.holdMs / 1000).toFixed(1),
+      breaths_done: r.breathsDone, breaths_target: r.breathsTarget, in_seconds: r.inSec, out_seconds: r.outSec,
+      recovery_hold_seconds: r.recoverySec, ring_enabled: r.ring === undefined ? '' : (r.ring ? 'yes' : 'no'),
+      settings_changed_mid_round: r.changed === undefined ? '' : (r.changed ? 'yes' : 'no'), app_version: r.version,
+      voice_enabled: r.voice === undefined ? '' : (r.voice ? 'yes' : 'no'),
+    };
+    return CSV_COLUMNS.map(k => row[k] ?? '').join(',');
+  }
+  function record(r) {
+    r.timestamp = stamp(Date.now());
+    if (nativeFile) { try { window.AndroidTTS.appendCsv(csvLine(r)); } catch (e) {} return; }
+    try {
+      const list = JSON.parse(localStorage.getItem(STORE_KEY)) || [];
+      list.push(r); localStorage.setItem(STORE_KEY, JSON.stringify(list));
+    } catch (e) {}
+  }
+
+  // ---------------- formatting ----------------
+  function fmt(ms) {
+    const s = ms / 1000, m = Math.floor(s / 60), r = s - m * 60;
+    return m > 0 ? `${m}:${r.toFixed(1).padStart(4, '0')}` : `${r.toFixed(1)}s`;
+  }
+
+  // ---------------- state machine ----------------
+  // phases: 'in' | 'out' | 'hold' | 'recovery' | 'gap'
+  let running = false, phase = null, phaseStart = 0, phaseDur = 0, breath = 0, round = 0, sessionId = null, timer = null;
+  let lastTap = 0, breathsDone = 0, roundStartSettings = {}, pendingRecord = null;
+
+  function setPhase(p, carry) {
+    // carry = exact scheduled start, so breath timings don't drift over 40 breaths
+    phase = p; phaseStart = carry || performance.now();
+    bigTimer.textContent = (p === 'in' || p === 'out') ? breath + (p === 'in' ? 1 : 0) : '';
+    sessionControls.style.display = (p === 'in' || p === 'out') ? 'block' : 'none';
+    if (p === 'in') {
+      breath++;
+      phaseDur = settings.inSec * 1000 / SPEED;
+      // with 5 breaths left, always announce it, even when breathing prompts are off
+      const last5 = settings.breaths - breath + 1 === 5;
+      const cue = last5 ? (settings.voice ? 'Last 5 remaining. Breathe in' : 'Last 5 remaining')
+                        : (settings.voice ? 'Breathe in' : '');
+      ring(true); if (cue) speakAfter(cue, settings.ring ? 150 : 0); else clearTimeout(speechTimer);
+      phaseLbl.textContent = 'Breathe in'; phaseLbl.style.color = 'var(--in)';
+      subLbl.textContent = `of ${settings.breaths} breaths · double-tap to skip`;
+      orb.style.background = 'radial-gradient(circle at 35% 30%, rgba(255,255,255,.35), var(--in) 60%)';
+      orb.style.boxShadow = '0 0 80px rgba(79,195,201,.35)';
+    } else if (p === 'out') {
+      phaseDur = settings.outSec * 1000 / SPEED;
+      ring(false); if (settings.voice) speakAfter('Breathe out', settings.ring ? 150 : 0); else clearTimeout(speechTimer);
+      phaseLbl.textContent = 'Breathe out'; phaseLbl.style.color = 'var(--out)';
+      orb.style.background = 'radial-gradient(circle at 35% 30%, rgba(255,255,255,.3), var(--out) 60%)';
+      orb.style.boxShadow = '0 0 80px rgba(108,140,255,.35)';
+    } else if (p === 'hold') {
+      GONGS.breathing(); speakAfter('Hold your breath', 900);
+      phaseLbl.textContent = 'Hold your breath'; phaseLbl.style.color = 'var(--hold)';
+      subLbl.textContent = 'Double-tap anywhere to stop';
+      orb.style.transform = 'scale(.62)';
+      orb.style.background = 'radial-gradient(circle at 35% 30%, rgba(255,255,255,.4), var(--hold) 60%)';
+      orb.style.boxShadow = '0 0 90px rgba(242,180,92,.35)';
+    } else if (p === 'recovery') {
+      GONGS.hold(); speakAfter('Inhale deeply, and hold for fifteen seconds', 700);
+      phaseLbl.textContent = 'Inhale & hold'; phaseLbl.style.color = 'var(--rec)';
+      subLbl.textContent = 'Hold for 15 seconds';
+      orb.style.transform = 'scale(1)';
+      orb.style.background = 'radial-gradient(circle at 35% 30%, rgba(255,255,255,.35), var(--rec) 60%)';
+      orb.style.boxShadow = '0 0 90px rgba(155,227,122,.35)';
+    } else if (p === 'gap') {
+      GONGS.recovery(); clearTimeout(speechTimer);
+      // the round is only saved once the whole sequence (breaths, hold, 15 s hold) is complete
+      if (pendingRecord) { record(pendingRecord); pendingRecord = null; }
+      phaseLbl.textContent = 'Round complete'; phaseLbl.style.color = 'var(--ink)';
+      subLbl.textContent = 'Next round starting…';
+      orb.style.transform = 'scale(.45)';
+    }
+  }
+
+  function startRound() {
+    round++; breath = 0;
+    roundStartSettings = Object.assign({}, settings);
+    roundLbl.textContent = `Round ${round}`;
+    setPhase('in');
+  }
+
+  // if in/out time changes mid-breath, keep how far through the breath we are and stretch/shrink the rest
+  function retimeCurrentBreath() {
+    if (!running || (phase !== 'in' && phase !== 'out')) return;
+    const now = performance.now();
+    const frac = Math.min(1, (now - phaseStart) / phaseDur);
+    phaseDur = (phase === 'in' ? settings.inSec : settings.outSec) * 1000 / SPEED;
+    phaseStart = now - frac * phaseDur;
+  }
+
+  function tick() {
+    if (!running) return;
+    const now = performance.now();
+    if ((phase === 'in' || phase === 'out') && now - phaseStart > phaseDur + 1500) phaseStart = now - phaseDur; // resync after a stall
+    const el = now - phaseStart;
+    if (phase === 'in') {
+      orb.style.transform = `scale(${0.45 + 0.55 * ease(Math.min(1, el / phaseDur))})`;
+      if (el >= phaseDur) setPhase('out', phaseStart + phaseDur);
+    } else if (phase === 'out') {
+      orb.style.transform = `scale(${1 - 0.55 * ease(Math.min(1, el / phaseDur))})`;
+      if (el >= phaseDur) {
+        if (breath >= settings.breaths) { breathsDone = breath; setPhase('hold'); }
+        else setPhase('in', phaseStart + phaseDur);
+      }
+    } else if (phase === 'hold') {
+      bigTimer.textContent = fmt(el * SPEED).replace('s', '');
+    } else if (phase === 'recovery') {
+      bigTimer.textContent = Math.ceil(Math.max(0, RECOVERY_MS - el) * SPEED / 1000);
+      if (el >= RECOVERY_MS) setPhase('gap');
+    } else if (phase === 'gap') {
+      if (el >= GAP_MS) startRound();
+    }
+  }
+  const ease = k => 0.5 - 0.5 * Math.cos(Math.PI * k);
+
+  function endHold() {
+    const held = (performance.now() - phaseStart) * SPEED;
+    const changed = ['inSec', 'outSec', 'breaths', 'ring', 'voice'].some(k => roundStartSettings[k] !== settings[k]);
+    pendingRecord = { session: sessionId, round, holdMs: Math.round(held),
+             breathsDone, breathsTarget: settings.breaths, inSec: settings.inSec, outSec: settings.outSec,
+             recoverySec: RECOVERY_SEC, ring: settings.ring, voice: settings.voice, changed, version: APP_VERSION };
+    lastHoldLbl.textContent = `Round ${round} hold: ${fmt(held)} · saved after the 15 s hold`;
+    setPhase('recovery');
+  }
+
+  session.addEventListener('pointerdown', e => {
+    if (!running || !['in', 'out', 'hold'].includes(phase)) return;
+    if (e.target.closest && e.target.closest('button, input, .controls')) return;
+    const now = performance.now();
+    if (now - lastTap < DOUBLE_TAP_MS) {
+      lastTap = 0;
+      if (phase === 'hold') endHold();
+      else { breathsDone = phase === 'out' ? breath : breath - 1; setPhase('hold'); }  // skip the rest of the breathing round
+    } else lastTap = now;
+  });
+
+  function start() {
+    initAudio();
+    speak(' '); // unlock speech on mobile browsers within the tap gesture
+    lockScreen();
+    running = true; round = 0; sessionId = stamp(Date.now());
+    lastHoldLbl.textContent = '';
+    home.style.display = 'none'; session.style.display = 'flex';
+    try { window.AndroidTTS && window.AndroidTTS.keepAwake && window.AndroidTTS.keepAwake(true); } catch (e) {}
+    setOpen(false);
+    startRound();
+    timer = setInterval(tick, 30);
+  }
+
+  function stop() {
+    running = false; clearInterval(timer); clearTimeout(speechTimer);
+    pendingRecord = null;   // an unfinished round is not recorded
+    try { hasNative ? window.AndroidTTS.stop() : speechSynthesis.cancel(); } catch (e) {}
+    try { window.AndroidTTS && window.AndroidTTS.keepAwake && window.AndroidTTS.keepAwake(false); } catch (e) {}
+    unlockScreen();
+    session.style.display = 'none'; home.style.display = 'flex';
+    renderHistory();
+  }
+
+  $('startBtn').addEventListener('click', start);
+  $('stopBtn').addEventListener('click', e => { e.stopPropagation(); stop(); });
+
+  // ---------------- history ----------------
+  const canDelete = !nativeFile || typeof window.AndroidTTS.writeCsv === 'function';
+  let shown = [], selecting = false, selected = new Set();
+
+  function deleteRecords(recs, all) {
+    if (nativeFile) {
+      const lines = (window.AndroidTTS.readCsv() || '').split(/\r?\n/);
+      const header = lines.shift() || CSV_HEADER;
+      let rest = lines.filter(l => l.trim());
+      if (all) rest = [];
+      else recs.forEach(r => { const k = rest.indexOf(r.raw); if (k >= 0) rest.splice(k, 1); });
+      window.AndroidTTS.writeCsv([header, ...rest].join('\n') + '\n');
+    } else {
+      try {
+        if (all) { localStorage.removeItem(STORE_KEY); return; }
+        const drop = new Set(recs.map(r => r.idx));
+        const list = JSON.parse(localStorage.getItem(STORE_KEY)) || [];
+        localStorage.setItem(STORE_KEY, JSON.stringify(list.filter((_, i) => !drop.has(i))));
+      } catch (e) {}
+    }
+  }
+
+  // in-page confirmation dialog
+  let modalAction = null;
+  function ask(title, text, yesLabel, action) {
+    $('modalTitle').textContent = title; $('modalText').textContent = text;
+    $('modalYes').textContent = yesLabel; modalAction = action;
+    $('modal').classList.add('show');
+  }
+  $('modalNo').addEventListener('click', () => { $('modal').classList.remove('show'); modalAction = null; });
+  $('modalYes').addEventListener('click', () => {
+    $('modal').classList.remove('show');
+    const a = modalAction; modalAction = null; if (a) a();
+  });
+
+  function setSelecting(on) {
+    selecting = on; if (!on) selected.clear();
+    $('history').classList.toggle('selecting', on);
+    $('selectBar').classList.toggle('show', on);
+    updateSelection();
+  }
+  function updateSelection() {
+    document.querySelectorAll('#history .row').forEach(r => r.classList.toggle('sel', selected.has(Number(r.dataset.i))));
+    $('selCount').textContent = `${selected.size} selected`;
+    $('selDelete').disabled = selected.size === 0;
+  }
+  $('selCancel').addEventListener('click', () => setSelecting(false));
+  $('selDelete').addEventListener('click', () => {
+    const n = selected.size; if (!n) return;
+    ask(`Delete ${n} round${n > 1 ? 's' : ''}?`, 'The selected breath-hold records will be removed permanently.', 'Delete', () => {
+      deleteRecords([...selected].map(i => shown[i]), false);
+      setSelecting(false); renderHistory();
+    });
+  });
+  $('selAll').addEventListener('click', () => {
+    ask('Delete ALL data?', `This permanently deletes ${shown.length === 1 ? 'the only breath-hold record' : `all ${shown.length} breath-hold records`}${nativeFile ? ' from the file on this phone' : ''}. This cannot be undone.`,
+      'Delete all', () => { deleteRecords([], true); setSelecting(false); renderHistory(); });
+  });
+
+  // long-press a row to start selecting; then taps toggle rows
+  (() => {
+    const h = $('history');
+    let timer = null, sx = 0, sy = 0, justSelected = false;
+    h.addEventListener('pointerdown', e => {
+      const row = e.target.closest('.row'); if (!row || selecting || !canDelete) return;
+      sx = e.clientX; sy = e.clientY;
+      timer = setTimeout(() => {
+        timer = null; justSelected = true;
+        selected.add(Number(row.dataset.i)); setSelecting(true);
+        try { navigator.vibrate && navigator.vibrate(30); } catch (err) {}
+      }, 550);
+    });
+    const cancel = () => { clearTimeout(timer); timer = null; };
+    h.addEventListener('pointermove', e => { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel(); });
+    h.addEventListener('pointerup', cancel);
+    h.addEventListener('pointercancel', cancel);
+    h.addEventListener('contextmenu', e => { if (e.target.closest('.row')) e.preventDefault(); });
+    h.addEventListener('click', e => {
+      const row = e.target.closest('.row'); if (!row || !selecting) return;
+      if (justSelected) { justSelected = false; return; }
+      const i = Number(row.dataset.i);
+      selected.has(i) ? selected.delete(i) : selected.add(i);
+      updateSelection();
+    });
+  })();
+
+  function renderHistory() {
+    shown = load();
+    const h = $('history');
+    if (!shown.length) {
+      h.innerHTML = '<div class="empty">Your breath-hold times will appear here.</div>';
+      if (selecting) setSelecting(false);
+      return;
+    }
+    const best = Math.max(...shown.map(r => r.holdMs));
+    const recent = shown.slice(-10);
+    const avg = recent.reduce((a, r) => a + r.holdMs, 0) / recent.length;
+    const bySession = {};
+    shown.forEach((r, i) => (bySession[r.session] = bySession[r.session] || []).push(i));
+    const ids = Object.keys(bySession).sort().reverse();
+    const tools = nativeFile ? '' : '<button id="copyBtn">Copy CSV</button>';
+    let html = `<h2>Breath holds ${tools}</h2>
+      <div class="stats">
+        <div class="stat"><div class="v">${fmt(best)}</div><div class="l">Best</div></div>
+        <div class="stat"><div class="v">${fmt(avg)}</div><div class="l">Avg last ${recent.length}</div></div>
+        <div class="stat"><div class="v">${shown.length}</div><div class="l">Rounds</div></div>
+      </div>`;
+    if (canDelete) html += '<div class="hint">Long-press a round to select and delete</div>';
+    ids.forEach(id => {
+      const d = new Date(id.replace(' ', 'T'));
+      const when = isNaN(d) ? id : d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) + ', ' +
+                   d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      html += `<div class="session"><div class="when">${when}</div>` +
+        bySession[id].sort((a, b) => shown[a].round - shown[b].round).map(i => {
+          const r = shown[i];
+          return `<div class="row${r.holdMs === best ? ' best' : ''}" data-i="${i}"><span class="chk"></span>` +
+                 `<span class="r">Round ${r.round}</span><span class="t">${fmt(r.holdMs)}</span></div>`;
+        }).join('') + `</div>`;
+    });
+    html += nativeFile
+      ? `<div class="fileNote">Saved on this phone: <b>${(() => { try { return window.AndroidTTS.csvLocation(); } catch (e) { return ''; } })() || 'Documents/Breathe/breath_holds.csv'}</b></div>`
+      : `<div class="fileNote">Stored in this browser only. Use Copy CSV to keep a copy.</div>`;
+    h.innerHTML = html;
+    if (selecting) { [...selected].forEach(i => { if (i >= shown.length) selected.delete(i); }); updateSelection(); }
+    const cb = $('copyBtn');
+    if (cb) cb.addEventListener('click', async e => {
+      try { await navigator.clipboard.writeText([CSV_HEADER, ...shown.map(csvLine)].join('\n')); e.target.textContent = 'Copied ✓'; }
+      catch (err) { e.target.textContent = 'Copy failed'; }
+      setTimeout(() => { if (e.target.isConnected) e.target.textContent = 'Copy CSV'; }, 2000);
+    });
+  }
+  renderHistory();
+})();
+</script>
+</body>
+</html>

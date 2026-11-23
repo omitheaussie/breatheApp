@@ -1,0 +1,58 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.omkar.breathe'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.omkar.breathe'
+        minSdk 29
+        targetSdk 35
+        versionCode 9
+        versionName "1.8"
+    }
+
+    // Fixed signing key so every build installs over the previous one.
+    // The keystore is NOT in the repo: CI decodes it from GitHub Actions secrets.
+    // Locally, put it at app/breathe-debug.jks (gitignored) and set the values below
+    // as environment variables or in ~/.gradle/gradle.properties.
+    // Without them the build falls back to the standard Android debug key.
+    def signingValue = { String name ->
+        System.getenv(name) ?: (project.findProperty(name) as String)
+    }
+    def keystoreFile = file(signingValue('BREATHE_KEYSTORE_PATH') ?: 'breathe-debug.jks')
+    def storePass = signingValue('BREATHE_STORE_PASSWORD')
+    def hasBreatheKey = keystoreFile.exists() && storePass
+
+    signingConfigs {
+        breathe {
+            if (hasBreatheKey) {
+                storeFile keystoreFile
+                storePassword storePass
+                keyAlias signingValue('BREATHE_KEY_ALIAS') ?: 'breathe'
+                keyPassword signingValue('BREATHE_KEY_PASSWORD') ?: storePass
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            if (hasBreatheKey) {
+                signingConfig signingConfigs.breathe
+            } else {
+                logger.warn('Breathe signing key not configured; using the default debug key. ' +
+                        'This APK will NOT install over builds signed with the Breathe key.')
+            }
+        }
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

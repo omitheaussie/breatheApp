@@ -1,0 +1,55 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          # Default also installs the legacy 'tools' package, which no longer
+          # exists in the SDK repository and makes sdkmanager exit 1.
+          packages: platform-tools
+
+      - name: Build debug APK
+        env:
+          BREATHE_KEYSTORE_BASE64: ${{ secrets.BREATHE_KEYSTORE_BASE64 }}
+          BREATHE_STORE_PASSWORD: ${{ secrets.BREATHE_STORE_PASSWORD }}
+          BREATHE_KEY_PASSWORD: ${{ secrets.BREATHE_KEY_PASSWORD }}
+          BREATHE_KEY_ALIAS: ${{ secrets.BREATHE_KEY_ALIAS }}
+        run: |
+          if [ -z "$BREATHE_KEYSTORE_BASE64" ] || [ -z "$BREATHE_STORE_PASSWORD" ]; then
+            echo "::error::Signing secrets missing. Set BREATHE_KEYSTORE_BASE64 and BREATHE_STORE_PASSWORD in repo Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          echo "$BREATHE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/breathe-debug.jks"
+          export BREATHE_KEYSTORE_PATH="$RUNNER_TEMP/breathe-debug.jks"
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk Breathe.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Breathe-apk
+          path: Breathe.apk
+
+      - name: Publish as a GitHub Release (easy phone download)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Breathe build ${{ github.run_number }}
+          files: Breathe.apk
