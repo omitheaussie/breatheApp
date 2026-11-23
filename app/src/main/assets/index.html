@@ -137,6 +137,18 @@
   .adjBtn { background: rgba(255,255,255,.06); border: 1px solid #2a3a55; color: var(--ink); border-radius: 8px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
   #sessionControls:not(.open) .sliders { display: none; }
   #topRight { display: flex; gap: 8px; }
+  /* ---------- safety notice ---------- */
+  #safety { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 20; align-items: center; justify-content: center; padding: 16px; }
+  #safety.show { display: flex; }
+  #safety .box { background: #121d30; border: 1px solid #2a3a55; border-radius: 16px; padding: 20px; width: min(440px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; }
+  #safety h2 { font-size: 20px; margin: 0 0 10px; color: var(--hold); }
+  #safety p, #safety li { color: var(--ink); font-size: 15px; line-height: 1.45; }
+  #safety p { margin: 0 0 10px; }
+  #safety ul { margin: 0 0 10px; padding-left: 20px; }
+  #safety li { margin-bottom: 6px; }
+  #safety .fine { color: var(--muted); font-size: 13px; }
+  #safetyOk { display: block; width: 100%; margin-top: 14px; border-radius: 10px; padding: 12px; font-size: 16px; font-weight: 700; border: none; background: var(--in); color: #06222a; cursor: pointer; }
+  #safetyLink { background: none; border: none; color: var(--muted); font-size: 13px; text-decoration: underline; cursor: pointer; padding: 4px 8px; }
 </style>
 </head>
 <body>
@@ -146,6 +158,7 @@
     <div id="homeCtlWrap">
       <div class="controls" id="homeControls"></div>
       <div class="toggles"><button class="tog" data-t="voice"></button><button class="tog" data-t="ring"></button></div>
+      <button id="safetyLink">Safety</button>
     </div>
     <div id="history"></div>
   </div>
@@ -156,6 +169,19 @@
     <button id="selDelete" class="danger">Delete</button>
     <button id="selAll" class="danger outline">Delete all</button>
   </div>
+
+  <div id="safety" role="dialog" aria-modal="true" aria-labelledby="safetyTitle"><div class="box">
+    <h2 id="safetyTitle">Safety first</h2>
+    <p>This app guides fast, deep breathing followed by breath holds. This can make you light-headed and can cause fainting without warning.</p>
+    <ul>
+      <li><b>Never</b> use it in or near water (bath, shower, pool), while driving, or while operating anything.</li>
+      <li>Always sit or lie down. Never practise standing up.</li>
+      <li>Talk to a doctor first if you are pregnant, or have epilepsy, a heart condition, high blood pressure, a history of stroke or fainting, or a breathing condition.</li>
+      <li>Stop if you feel unwell. Tingling and light-headedness are common; chest pain, fainting or severe discomfort are not.</li>
+    </ul>
+    <p class="fine">This app is for general wellness only and is not medical advice. You use it at your own risk; the author accepts no liability for any injury or harm.</p>
+    <button id="safetyOk">I understand</button>
+  </div></div>
 
   <div id="modal"><div class="box">
     <div id="modalTitle"></div><div id="modalText"></div>
@@ -534,7 +560,7 @@
     renderHistory();
   }
 
-  $('startBtn').addEventListener('click', start);
+  $('startBtn').addEventListener('click', () => { if (safetyAccepted()) start(); else showSafety(start); });
   $('stopBtn').addEventListener('click', e => { e.stopPropagation(); stop(); });
 
   // ---------------- history ----------------
@@ -558,6 +584,24 @@
       } catch (e) {}
     }
   }
+
+  // safety notice: shown on first launch and before the first Start until accepted
+  const SAFETY_KEY = 'breathe.safety.v1';
+  let safetyOkThisSession = false;   // fallback if storage is unavailable
+  let afterSafety = null;
+  function safetyAccepted() {
+    if (safetyOkThisSession) return true;
+    try { return localStorage.getItem(SAFETY_KEY) === 'accepted'; } catch (e) { return false; }
+  }
+  function showSafety(then) { afterSafety = then || null; $('safety').classList.add('show'); }
+  $('safetyOk').addEventListener('click', () => {
+    safetyOkThisSession = true;
+    try { localStorage.setItem(SAFETY_KEY, 'accepted'); } catch (e) {}
+    $('safety').classList.remove('show');
+    const a = afterSafety; afterSafety = null; if (a) a();
+  });
+  $('safetyLink').addEventListener('click', () => showSafety());
+  if (!safetyAccepted()) showSafety();
 
   // in-page confirmation dialog
   let modalAction = null;

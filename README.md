@@ -4,6 +4,16 @@ Guided breathing app: 40 breaths (4 s in / 3 s out) → breath hold (double-tap 
 
 This is a very simple app. It requests no permissions (not even internet access), has no ads or tracking, and stores its data only on your device. Nothing is sent anywhere, so there are no privacy concerns.
 
+## Safety
+Breathe guides fast, deep breathing followed by breath holds. This can make you light-headed and can cause fainting without warning.
+
+- **Never** use it in or near water (bath, shower, pool), while driving, or while operating anything. Fainting in water can be fatal (shallow-water blackout).
+- Always sit or lie down. Never practise standing up.
+- Talk to a doctor first if you are pregnant, or have epilepsy, a heart condition, high blood pressure, a history of stroke or fainting, or a breathing condition.
+- Stop if you feel unwell. Tingling and light-headedness are common; chest pain, fainting or severe discomfort are not.
+
+This app is for general wellness only and is not medical advice, diagnosis or treatment. You use it at your own risk; the author accepts no liability for any injury or harm arising from its use. The app shows this notice on first launch.
+
 ## Get the APK (no Android Studio needed)
 1. Create a new repository on github.com (private is fine).
 2. Upload the contents of this folder (keep the `.github` folder!) and commit to `main`.
